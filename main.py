@@ -41,8 +41,14 @@ plt.plot(df["1"], df['data'])
 plt.show()
 
 print(df["1"][df["max"].dropna().index])
+# %%
+df2 = Trac2A
+df2 = df2.rename(columns={"Position (mm)": "pos","Force (N)": "for", "Strain (%)":"str", "Time (min)": "time"})
+e, w, L0 = df2["e (mm)"][0], df2["w (mm)"][0], df2["L0 (mm)"][0]
+print("e, w, L0", e, w, L0)
+df2.drop(['Unnamed: 4', 'Unnamed: 5', "e (mm)", "w (mm)", "L0 (mm)"], axis=1)
 
 
-df
+plt.plot(df2["pos"], df2["for"])
 
 # %%
