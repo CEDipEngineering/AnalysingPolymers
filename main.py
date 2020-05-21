@@ -8,7 +8,18 @@ from numpy.polynomial.polynomial import polyfit
 import os
 from scipy.signal import argrelextrema
 
+def linFilter(y):
+    n = 100  # the larger n is, the smoother curve will be
+    b = [1.0 / n] * n
+    a = 1
+    yy = lfilter(b,a,y)
+    return yy
 
+def findLocalMaximum(strain, start, end, force):
+    return max(force[np.logical_and(strain>start,strain<end)])
+
+def chopTail(arr, val):
+    return np.where(arr<val)
 
 Infr2A = pd.read_csv("Infravermelho//2_A.CSV", names=["1", "2"])
 Infr6A = pd.read_csv("Infravermelho//6_A.CSV", names=["1", "2"])
@@ -29,32 +40,49 @@ Melhorar amostra 2 ajuste de reta
 """
 #%%
 
-df = Infr6A
-df["data"] = Infr6A["2"]
+def plotSpecto(df, title, span):
+    df["data"] = Infr6A["2"]
 
-lista = []
-for x in df["2"]:
-    if x<0.1:
-        lista.append(0)
-    else:
-        lista.append(x)
+    lista = []
+    for x in df["2"]:
+        if x<0.1:
+            lista.append(0)
+        else:
+            lista.append(x)
 
-df["data"] = lista
+    df["data"] = lista
 
 
-n=15 # number of points to be checked before and after 
-# Find local peaks
-df['min'] = df.iloc[argrelextrema(df.data.values, np.less, order=n)[0]]['data']
-df['max'] = df.iloc[argrelextrema(df.data.values, np.greater, order=n)[0]]['data']
+    n=15 # number of points to be checked before and after 
+    # Find local peaks
+    df['min'] = df.iloc[argrelextrema(df.data.values, np.less, order=n)[0]]['data']
+    df['max'] = df.iloc[argrelextrema(df.data.values, np.greater, order=n)[0]]['data']
+    
+    plt.scatter(df["1"], df['min'], c='r')
+    plt.scatter(df["1"], df['max'], c='g')
+    plt.plot(df["1"], df['data'])
+    
+    maxes = df["1"][df["max"].dropna().index]
 
-# Plot results
-# plt.figure(figsize=(21,12))
-plt.scatter(df["1"], df['min'], c='r')
-plt.scatter(df["1"], df['max'], c='g')
-plt.plot(df["1"], df['data'])
-plt.show()
 
-print(df["1"][df["max"].dropna().index])
+    for e, i in zip(maxes, df["max"].dropna().index):
+        print((df["data"][i], e))
+        if e not in [637.8405]:
+            plt.annotate("%0.2f"%e, (e, df["data"][i]))
+
+    # Plot results
+    # plt.figure(figsize=(21,12))
+
+    plt.xlim(span[0], span[1])
+    plt.title(title)
+    plt.xlabel("Número de onda (1/cm)")
+    plt.savefig(title+'.pdf')
+    plt.show()
+    print(df["1"][df["max"].dropna().index])
+
+plotSpecto(Infr2A, "Amostra 2", (600, 3000))
+plotSpecto(Infr6A, "Amostra 6", (400, 1300))
+
 # %%
 def plot(df, title):
     df2 = df
@@ -91,12 +119,14 @@ def plot(df, title):
 
     plt.xlabel("Strain (%)")
     plt.ylabel("Tension (MPa)")
-    
+    plt.scatter(0.5,5, label = "Modulo de Young: %0.2f (GPa)"%(m/10), alpha = 0)
+    plt.legend()
+
+    plt.savefig(title+'1.pdf')   
     plt.show()
 
     plt.plot(df2["pos"]/L0, df2["tension"])
-    
-    
+
     plt.title(title)
 
 
@@ -108,9 +138,10 @@ def plot(df, title):
     print(limit[0])
     a = df2["pos"][limit[0]]/L0
     b = limit[1]
-    plt.scatter(a, b, c = "green", label = "Limite de escoamento: %.02f"%b)
+    plt.scatter(a, b, c = "green", label = "Limite de escoamento: %.02f (MPa)"%b)
     plt.legend()
     
+    plt.savefig(title+'2.pdf')
     plt.show()
 
 
@@ -122,17 +153,5 @@ def plot(df, title):
 plot(Trac2A, "Amostra 2")
 plot(Trac6C, "Amostra 6")
 
-# %%
-def linFilter(y):
-    n = 100  # the larger n is, the smoother curve will be
-    b = [1.0 / n] * n
-    a = 1
-    yy = lfilter(b,a,y)
-    return yy
 
-def findLocalMaximum(strain, start, end, force):
-    return max(force[np.logical_and(strain>start,strain<end)])
-
-def chopTail(arr, val):
-    return np.where(arr<val)
 # %%
